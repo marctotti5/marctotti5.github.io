@@ -3,10 +3,16 @@ output_dir: "."
 navbar:
   title: "Time Series Analysis with R"
   left:
+    - text: "Home"
+      href: index.html
     - text: "Unemployment in Spain"
       href: unemployment_forecast.html
-    - text: "About"
+    - text: "US Gas Consumption Forecast"
+      href: usgas.html
+    - text: "US Car Sales Forecast"
       href: car_sales_forecast.html
+    - text: "About"
+      href:about.html
 output:
   html_document:
     theme: united

@@ -1,7 +1,7 @@
 ---
 title: "Forecasting US Vehicle Sales"
 author: "Marc Pastor"
-date: "14 de marzo de 2020"
+date: "March 14th 2020"
 output: html_document
 ---
 <style>

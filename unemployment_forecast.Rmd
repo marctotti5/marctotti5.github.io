@@ -1,10 +1,9 @@
 ---
 title: "Forecasting - Unemployed people in Spain (2020-2021)"
 author: "Marc Pastor"
-date: "7 de marzo de 2020"
+date: "March 7th 2020"
 fontsize: 12pt
-source: Ministerio de Empleo y Seguridad Social (Espa?f±a)
-dataset: https://www.epdata.es/asi-evoluciona-paro-espana/57169e9e-1863-4a8d-92a6-ebb618f50fd9/espana/106
+source: Spanish Ministry of Employment & Social Care
 ---
 In this study I am going to forecast the number of unemployed people in Spain for the following 12 months.
 
