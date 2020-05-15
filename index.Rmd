@@ -1,7 +1,322 @@
 ---
-title: "My Website"
+title: "Forecasting - Unemployed people in Spain (2020-2021)"
+author: "Marc Pastor"
+date: "7 de marzo de 2020"
+fontsize: 12pt
+source: Ministerio de Empleo y Seguridad Social (Espa?f±a)
+dataset: https://www.epdata.es/asi-evoluciona-paro-espana/57169e9e-1863-4a8d-92a6-ebb618f50fd9/espana/106
 ---
+In this study I am going to forecast the number of unemployed people in Spain for the following 12 months.
 
-Hello, Website!
+# Loading the basic libraries that I am going to use
+```{r setup, results = "hide", message = F}
+library(forecast)
+library(TSstudio)
+library(plotly)
+library(tidyverse)
+library(TSstudio)
+library(plotly)
+library(stats)
+library(forecast)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(dygraphs)
+library(lubridate)
+library(datasets)
+library(base)
+library(h2o)
+```
 
-## Hola a todos, bienvenidos a mi página.
+## Loading the data into R
+```{r}
+
+setwd("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/TIME SERIES ANALYSIS/paroesp")
+paroesp <- read.csv("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/TIME SERIES ANALYSIS/paroesp/paroesp.csv", sep = ";", dec = ".")
+```
+
+
+# Data preparation
+```{r}
+paroesp <- paroesp[1:230,1:3]
+colnames(paroesp) <- c("Year", "Month", "y")
+paroesp$y <- as.numeric(gsub(",", ".", gsub("\\.", "", paroesp$y)))
+paroesp$month_number <- ifelse(paroesp$Month == "Enero", 1,
+                               ifelse(paroesp$Month == "Febrero", 2,
+                                      ifelse(paroesp$Month == "Marzo", 3,
+                                             ifelse(paroesp$Month == "Abril", 4,
+                                                    ifelse(paroesp$Month == "Mayo", 5,
+                                                           ifelse(paroesp$Month == "Junio", 6,
+                                                                  ifelse(paroesp$Month == "Julio", 7,
+                                                                         ifelse(paroesp$Month == "Agosto", 8,
+                                                                                ifelse(paroesp$Month == "Septiembre", 9,
+                                                                                       ifelse(paroesp$Month == "Octubre", 10,
+                                                                                              ifelse(paroesp$Month == "Noviembre", 11,
+                                                                                                     ifelse(paroesp$Month == "Diciembre", 12, "Nulo"))))))))))))
+```
+
+Now we create the date object from the year, month and day. We suppose that every record is recorded on the first day of each month, in order to create the time series. object
+```{r pressure, echo=FALSE}
+library(lubridate)
+paroesp$Year <- as.character(paroesp$Year)
+paroesp$month_number <- as.character(paroesp$month_number)
+paroesp$day <- 1 
+paroesp$date <- as.Date(paste(paroesp$Year, paroesp$month_number, paroesp$day, sep = "-"))
+paroesp <- paroesp[,c(6,3)]
+head(paroesp)
+```
+
+# Creating the time series
+```{r, fig.align='center'}
+paroesp_ts <- ts(paroesp[,2], start = c(lubridate::year(min(paroesp$date)), lubridate::month(min(paroesp$date))), frequency = 12)
+```
+
+# Exploratory data analysis
+```{r, fig.align='center'}
+ts_decompose(paroesp_ts)
+ts_plot(paroesp_ts,
+        title = "Unemployed people in Spain, 2000-2020",
+        Xtitle = "Year",
+        Ytitle = "N?mero of unemployed")
+```
+
+We can see that the series has two very different cycles (before 2013 and after). Since we want to forecast the following year, we only will data after 2013, because we don't want to introduce noise to model. Also, the series has an additive structure.
+
+
+```{r, fig.align='center'}
+paroesp_ts_2013 <- window(paroesp_ts, start = c(2013,1))
+ts_info(paroesp_ts_2013)
+ts_plot(paroesp_ts_2013, 
+        title = "Unemployed people in Spain",
+        Xtitle = "Year",
+        Ytitle = "Number of unemployed people")
+```
+
+# Seasonality analysis
+```{r, fig.align='center'}
+ggseasonplot(paroesp_ts_2013, year.labels = TRUE, continuous = T) 
+ggseasonplot(paroesp_ts_2013, polar = TRUE)
+ts_seasonal(paroesp_ts_2013, type = "normal")
+ts_seasonal(paroesp_ts_2013, type = "cycle") 
+ts_seasonal(paroesp_ts_2013, type = "box")
+```
+The series has a clear seasonal component (during summer the number of unemployed people reduces due to tourism)
+
+# Correlation analysis
+```{r, fig.align='center'}
+par(mfrow = c(1,2))
+acf(paroesp_ts_2013)
+pacf(paroesp_ts_2013)
+```
+
+Since there is a linear trend in the first acf plot, this is an indicator that the series is non-stationary and in order to see the true relationship between the series and its lags, we detrend it.
+```{r, fig.align='center'}
+par(mfrow = c(1,2))
+acf(diff(paroesp_ts_2013, 1), lag.max = 60) 
+pacf(diff(paroesp_ts_2013, 1), lag.max = 60)
+ts_lags(paroesp_ts_2013, lags = c(1, 12, 24, 36))
+```
+As we can see there is a strong relationship between the series and its first non-seasonal lag, and its first and second seasonal lags.
+
+# We split the series into training and test partitions.
+```{r}
+paro_esp_13_split <- ts_split(paroesp_ts_2013, sample.out = 12)
+train <- paro_esp_13_split$train
+test <- paro_esp_13_split$test 
+```
+
+# First approach: Linear Regression (Season and Trend)
+```{r}
+md_lm <- tslm(train ~ season + trend)
+summary(md_lm)
+fc_lm <- forecast(md_lm, h = 12)
+accuracy(fc_lm, test)
+test_forecast(actual = paroesp_ts_2013,
+              forecast.obj = fc_lm,
+              test = test)
+checkresiduals(md_lm) 
+```
+MAPE in the test partition is nearly 7 times higher than in the training test, so the model may be overfitting.
+In addition residuals aren't white noise (because they're correlated), and therefore the model couldn't capture all the patterns of data.
+Finally residuals aren't normally distributed. Due all this reasons we won't consider this model to forecast our data.
+
+# Second approach: Linear Regression (Season, trend, summerseason, springbreak and christmas)
+We create a data frame to store the variables we are going to regress against with. These variables are springbreak (a binary variable with value = 1 if the month is April), summerseason (a variable with value 1 if the months are May, June, July, August or September), and christmas (following the same criteria, but with December and January). I have tried to use these variables, because these are special seasons where usually unemployment is decreased.
+```{r}
+paroesp_13_df <- filter(paroesp, lubridate::year(date) >= 2013) 
+paroesp_13_df$summerseason <- ifelse(lubridate::month(paroesp_13_df$date) == 5, 1,
+                                     ifelse(lubridate::month(paroesp_13_df$date) == 6, 1,
+                                            ifelse(lubridate::month(paroesp_13_df$date) == 7, 1,
+                                                   ifelse(lubridate::month(paroesp_13_df$date) == 8, 1,
+                                                          ifelse(lubridate::month(paroesp_13_df$date) == 9, 1, 0)))))
+paroesp_13_df$springbreak <- ifelse(lubridate::month(paroesp_13_df$date) == 4, 1, 0)
+paroesp_13_df$christmas <- ifelse(lubridate::month(paroesp_13_df$date) == 12, 1,
+                                  ifelse(lubridate::month(paroesp_13_df$date) == 1, 1, 0))
+train_df <- paroesp_13_df[1:(nrow(paroesp_13_df) - 12),]
+test_df <- paroesp_13_df[(nrow(paroesp_13_df) - 12 + 1): nrow(paroesp_13_df),]
+
+md_lm2 <- tslm(train ~ trend + season + summerseason + springbreak + christmas, data = train_df)
+summary(md_lm2)
+fc_lm2 <- forecast(md_lm2, h = 12, newdata = test_df)
+accuracy(fc_lm2, test)
+test_forecast(actual = paroesp_ts_2013,
+              forecast.obj = fc_lm2,
+              test = test)
+checkresiduals(md_lm2) 
+```
+The same problem that happenned with our first regression model occurs with this one, and also the new variables aren't statistically significant.
+
+# Forecasting with Holt's Method
+```{r}
+paro_esp_13_split <- ts_split(paroesp_ts_2013, sample.out = 12)
+train <- paro_esp_13_split$train
+test <- paro_esp_13_split$test 
+
+fc_holt <- holt(train, h = 12, initial = "optimal")
+fc_holt$model
+accuracy(fc_holt, test) 
+checkresiduals(fc_holt)
+```
+Now we try to predict the values in the test partition with this model
+```{r}
+test_forecast(actual = paroesp_ts_2013,
+              forecast.obj = fc_holt,
+              test = test)
+```
+The conclusion is similar to the linear regressions, the model is overfitting, the residuals aren't white noise and they're correlated with their lags.
+
+# Forecasting with ARIMA (and SARIMA) models
+We first plot the autocorrelation function and the partial autocorrelation function plots.
+```{r}
+par(mfrow = c(1, 2))
+acf(paroesp_ts_2013, lag.max = 60)
+pacf(paroesp_ts_2013, lag.max = 60)
+```
+As we can see in the acf, the correlation of the series and its lags is slowly decaying in a linear manner. Therefore the series is not stationary.
+Due to this, we aren't able to extract a lot of information of the real relationship between the series and its lags. 
+That's why we differentiate the series with its first non-seasonal lag (in order to detrend it)
+```{r}
+paroesp13_d1 <- diff(train, 1)
+par(mfrow = c(1,2))
+acf(paroesp13_d1, lag.max = 60)
+pacf(paroesp13_d1, lag.max = 60)
+ts_plot(paroesp13_d1,
+        title = "Unemployed people in Spain - First Difference",
+        Xtitle = "Year",
+        Ytitle = "Number of Unemployed people") 
+```
+We can see there's still a bit of variance, to try to stabilize I try two different approaches
+
+## 1. Taking the second order non-seasonal difference
+```{r}
+paroesp13_d2 <- diff(paroesp13_d1, 1)
+par(mfrow = c(1,2))
+acf(paroesp13_d2, lag.max = 60)
+pacf(paroesp13_d2, lag.max = 60)
+ts_plot(paroesp13_d2,
+        title = "Unemployed people in Spain - Second non-seasonal difference",
+        Xtitle = "Year",
+        Ytitle = "Number of Unemployed people")
+```
+As we can see in the last plot this process doesn't decrease the variance, it increases it (so we discard it)
+
+## 2. Taking the first non-seaonal difference and the first seasonal difference
+```{r}
+paroesp13_d1_d12 <- diff(paroesp13_d1, 12)
+par(mfrow = c(1, 2))
+acf(paroesp13_d1_d12, lag.max = 60)
+pacf(paroesp13_d1_d12, lag.max = 60)
+ts_plot(paroesp13_d1_d12)
+```
+It also increases the variance, so we discard it
+
+# Tuning the parameters
+Since the series has a lot of correlation with its seasonal lags, we will try to fit an SARIMA model.
+We create a function that fits arima models, for different values of p,d,q,P,D,Q and gives the AIC(error metric) for each one. The less AIC has de model the better it will perform. We select the top three models with lowest AIC.
+```{r}
+p <- q <- P <- Q <- 0:2
+d <- 1
+D <- 0
+arima_grid <- expand.grid(p,d,q,P,D,Q)
+names(arima_grid) <- c("p", "d", "q", "P", "D", "Q")
+arima_grid$k <- rowSums(arima_grid)
+arima_grid <- filter(arima_grid, k <= 3)
+
+arima_search <- lapply(1:nrow(arima_grid), function(i){
+        md <- NULL
+        md <- arima(train, order = c(arima_grid$p[i], arima_grid$d[i], arima_grid$q[i]), 
+                    seasonal = list(order = c(arima_grid$P[i], arima_grid$D[i], arima_grid$Q[i])),
+                    method = "ML")
+        
+        results <- data.frame(p = arima_grid$p[i], d = arima_grid$d[i], q = arima_grid$q[i],
+                              P = arima_grid$P[i], D = arima_grid$D[i], Q = arima_grid$Q[i],
+                              AIC = md$aic)
+}) %>% bind_rows() %>% arrange(AIC) 
+arima_search[1:3,]
+```
+Our function tells us that the three models with less AIC are in ascending order: SARIMA(0,1,0)(1,0,1), SARIMA(0,1,0)(2,0,0) y SARIMA(0,1,0)(1,0,0).
+We will compare the performance of all three and select the best one.
+```{r}
+arima_md1 <- arima(train, order = c(0,1,0), seasonal = list(order = c(1,0,1)))
+fc_arima_md1 <- forecast(arima_md1, h = 12)
+accuracy(fc_arima_md1, test)
+checkresiduals(arima_md1)
+
+arima_md2 <- arima(train, order = c(0,1,0), seasonal = list(order = c(2,0,0)))
+fc_arima_md2 <- forecast(arima_md2, h = 12)
+accuracy(fc_arima_md2, test)
+checkresiduals(arima_md2)
+
+arima_md3 <- arima(train, order = c(0,1,0), seasonal = list(order = c(1,0,0)))
+fc_arima_md3 <- forecast(arima_md3, h = 12)
+accuracy(fc_arima_md3, test)
+checkresiduals(fc_arima_md3)
+```
+The third model SARIMA(0,1,0)(1,0,0) is the best in terms of MAPE, and its not overfitting (SARIMA(0,1,0)(2,0,0) would be in 2nd place and SARIMA(0,1,0)(1,0,1) is overfitting, because the MAPE of testing partition is much higher than in the training partition).
+If we check the residuals we can see that three models perform pretty well, series seems to be kind of white noise, and in all cases residuals seem to have a correlation with lag 11 (maybe because of a non-typical value or because the model wasn't able to capture all the pattern of the series). The distribution of the three models' residuals seems to be fairly normal.
+All in all the model that performs best in terms of MAPE and has the best proportion between the MAPE of the training and testing partitions, without overfitting is model 3 (SARIMA(0,1,0)(2,0,0))
+```{r}
+test_forecast(paroesp_ts_2013, 
+              forecast.obj = fc_arima_md1,
+              test = test)
+test_forecast(paroesp_ts_2013, 
+              forecast.obj = fc_arima_md2,
+              test = test)
+test_forecast(paroesp_ts_2013, 
+              forecast.obj = fc_arima_md3,
+              test = test)
+```
+
+Here graphically we can confirm our suspicions, and the third model is the best of all three.
+We compare this model to th output that gives us the auto.arima() function, which determines optimal values (not always the best), to fit an ARIMA model in a time series.
+```{r}
+auto <- auto.arima(train) 
+fc_auto <- forecast(auto, h = 12)
+accuracy(fc_auto, test)
+checkresiduals(auto)
+test_forecast(actual = paroesp_ts_2013,
+              forecast.obj = fc_auto,
+              test = test)
+```
+The auto.arima() function recommends us to fit an ARIMA(0,2,1)(0,1,1) with an AIC score of 1393, seems to not be overfitting. If we observe the residuals, we can see they are not normally distributed, the lags seem to not be correlated, and the Ljung Box Test indicates us that they are independent.
+
+# Deciding the final model
+I have tried various models and the only one that seems to fit fairly well the series is the SARIMA(0,1,0)(1,0,0). Even the auto.arima model performs better, I don't think that represents the true behaviour of the series (because before I analyzed the effects of doing a second differentiation, and they resulted in more variance to the series). Also this auto generated model has 3 orders of differencing, when it is reccomended not to exceed the 2 orders of differencing. That's why I prefer to use my SARIMA(0,1,0)(1,0,0) model to forecast the final result. Even that in the residuals analysis, the SARIMA(0,1,0)(1,0,0) seems to have some degree of correlation with the 11th lag, I think that relationship may be caused by chance. On the other hand the residuals of the SARIMA(0,2,1)(0,1,1) and their lags seem to not be correlated, they are much more variant and they aren't definetely normally distributed. For all these reasons the model I choose as the best or as the less bad is the SARIMA(0,1,0)(1,0,0). 
+
+# Final forecast
+```{r}
+paroesp13_best_md <- arima(paroesp_ts_2013, order = c(0, 1, 0), seasonal = list(order = c(1, 0, 0)))
+fc_test_best <- forecast(paroesp13_best_md, h = 12)
+plot_forecast(fc_test_best,
+              title = "Forecast of Unemployed people in Spain using SARIMA(0,1,0)(1,0,0)",
+              Xtitle = "Year",
+              Ytitle = "Number of Unemployed people")
+
+library(ggplot2)
+library(ggfortify)
+startTime <- as.Date("2018-01-01")
+endTime <- as.Date("2021-01-04")
+start.end <- c(startTime, endTime)
+autoplot(fc_test_best) + ggtitle("Number of Unemployed people in Spain - Forecast using SARIMA(0,1,0)(1,0,0)") + xlab("Year") + ylab("Number of Unemployed people") + theme_replace() + scale_x_date(limits = start.end) + 
+        ylim(c(2750000, 3600000))
+```
