@@ -6,7 +6,7 @@ navbar:
     - text: "Unemployment in Spain"
       href: unemployment_forecast.html
     - text: "About"
-      href: about.html
+      href: car_sales_forecast.html
 output:
   html_document:
     theme: united
