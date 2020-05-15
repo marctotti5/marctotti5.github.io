@@ -1,0 +1,403 @@
+---
+title: "Forecasting US Vehicle Sales"
+author: "Marc Pastor"
+date: "14 de marzo de 2020"
+output: html_document
+---
+<style>
+pre {
+  font-size: 14px;
+}
+</style>
+# Introduction
+In this project I am going to forecast the number of vehicles sold in the US for the next 12 months. This forecast is based on the USVSales dataset, which is availaible by default in the R enviroment. 
+This dataset is a monthly time series object starting in January 1976 and ending in september 2019.
+In order to achieve the desired forecast I am going to compare various models (mainly Holt-Winters Model and SARIMA).
+
+## **1. Loading the necessary libraries**
+```{r, results='hide', message=FALSE}
+library(forecast)
+library(TSstudio)
+library(plotly)
+library(tidyverse)
+library(TSstudio)
+library(plotly)
+library(stats)
+library(forecast)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(dygraphs)
+library(lubridate)
+library(datasets)
+library(base)
+library(h2o)
+library(ggfortify)
+library(knitr)
+library(gridExtra)
+library(formattable)
+```
+
+## **2. Loading the data into R**
+As previously mentioned, this dataset is included in the R enviroment, so we simply have to use the data() command. After that we use the formattable function, to plot the time series in a table (here I am plotting the last ten observations of the dataset).
+
+```{r, message = FALSE, render = "normal_print"}
+data("USVSales")
+formattable(ts_to_prophet(tail(USVSales, 10)), align = c("c", "c"), list("ds" = formatter(
+              "span", style = ~ style(color = "grey",font.weight = "bold")), "y" = formatter("span", style = ~ style(color = "grey", font.weight = "bold"))))
+            
+```
+
+## **3. Exploratory data analysis**
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+autoplot(USVSales, fill = "red") + ggtitle("US Monthly Vehicle Sales") +  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+axis.text = element_text(size = 13), axis.title = element_text(size = 14)) + 
+xlab("Year") + ylab("Number of sold cars") 
+```
+
+### **3.1 Filtering the most recent observations**
+
+We can see that the model has a very clear seasonal component, as well as a non-linear trend, and various cycles.
+Snce we want to forecast the following 12 months, it makes no sense to use all the dataset, since it may introduce noise into our model.
+We filter the data of the last cycle (the actual cycle)
+
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+USVSales10 <- window(USVSales, start = c(2010, 1), frequency = 12)
+autoplot(USVSales10, fill = "red") + ggtitle("US Monthly Vehicle Sales (2010-2019)") +  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+axis.text = element_text(size = 13), axis.title = element_text(size = 14)) + 
+xlab("Year") + ylab("Number of sold cars") 
+```
+
+```{r, message = FALSE, fig.align="center", fig.height = 9, fig.width = 10, warning = FALSE}
+decompose(USVSales10) %>% plot()
+```
+
+### **3.2 Exploratory analysis conclusions**
+
+- It is an additive series
+- We can appreciate the clearly monthly seasonality, and we can see that the model has trend (which doesn't seem linear).
+- This trend has stabilized from 2016 until nowadays.
+
+
+## 4 **Seasonality analysis**
+In order to analyze the seasonal patterns in the data we create a dataframe with year and month columns in order to be able to create some ggplots.
+Here we can see the last 10 observationsof the dataframe we have created.
+```{r, message = FALSE, fig.align="center", fig.height = 9, fig.width = 10, warning = FALSE}
+USVSales10_df <- ts_to_prophet(USVSales10)
+USVSales10_df$year <- lubridate::year(USVSales10_df$ds)
+USVSales10_df$month <- lubridate::month(USVSales10_df$ds)
+formattable(tail(USVSales10_df, 10), align = c("c", "c", "c", "c"), list("ds" = formatter(
+              "span", style = ~ style(color = "grey",font.weight = "bold")), 
+              "y" = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+              "year" = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+              "month" = formatter("span", style = ~ style(color = "grey", font.weight = "bold"))))
+```
+
+### **4.1 Visualizing yearly density plots**
+```{r, message = FALSE, fig.align="center", fig.height = 9, fig.width = 10, warning = FALSE}
+ggplot(data = USVSales10_df, aes(x = y)) + geom_density(data = USVSales10_df, aes(fill = as.factor(year))) + 
+        facet_grid(year~.) + labs(fill = "Year") + ggtitle("US Vehicle Sales density plots - by year") + 
+        theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+        axis.text = element_text(size = 13), axis.title = element_text(size = 14))
+```
+
+We can observe that there is a clear trend, the number of cars sold has increased between 2010 and 2012, and seems to have stabilized between 2013 and 2019.
+
+### **4.2 Visualizing monthly density plots**
+```{r, message = FALSE, fig.align="center", fig.height = 9, fig.width = 10, warning = FALSE}
+ggplot(data = USVSales10_df, aes(x = y)) + geom_density(data = USVSales10_df, aes(fill = as.factor(month))) + 
+        facet_grid(month~.) + labs(fill = "Month (number)") + ggtitle("US Vehicle Sales Density plots - by month") +
+        theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+        axis.text = element_text(size = 13), axis.title = element_text(size = 14))
+
+```
+
+Apparently we can't derive a lot of insights from this plot, because it is very affected by the trend, and therefore it's not showing the real seasonal pattern.
+We **detrend** the series and plot again the same chart, in order to visualize the real pattern.
+
+```{r, message = FALSE, fig.align="center", fig.height = 9, fig.width = 10, warning = FALSE}
+USVSales10_detrended <- USVSales10 - decompose(USVSales10)$trend
+USVSales10_detrended_df <- ts_to_prophet(USVSales10_detrended)
+USVSales10_detrended_df$year <- lubridate::year(USVSales10_detrended_df$ds)
+USVSales10_detrended_df$month <- lubridate::month(USVSales10_detrended_df$ds)
+USVSales10_detrended_df <- USVSales10_detrended_df %>% filter(!is.na(y))
+ggplot(data = USVSales10_detrended_df, aes(x = y)) + geom_density(data = USVSales10_detrended_df, aes(fill = as.factor(month))) + 
+        facet_grid(month~.) + labs(fill = "Month (number)") + ggtitle("US Vehicle Sales Density plots - by Year (Detrended series)") +
+        theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+        axis.text = element_text(size = 13), axis.title = element_text(size = 14))
+```
+
+We can see there's some monthly seasonality: sales increase between January and March and then decrease between April and November. Finally there's another increase in December.
+
+### **4.3 Monthly seasonality visualization using box plots**
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+ggplot(data = USVSales10_detrended_df, aes(x = as.factor(month), y = y)) + 
+       geom_jitter(aes(x = as.factor(month), y = y, colour = as.factor(month)), 
+                     size = 2) + 
+        geom_boxplot(aes(fill = as.factor(month)), alpha = 0.5) + 
+        ggtitle("Number of Sold Vehicles - Boxplot") + 
+        theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+        axis.text = element_text(size = 13), axis.title = element_text(size = 14),
+        legend.position = "none") + 
+        xlab("Month (number)") + ylab("Number of sold vehicles") 
+```
+
+### **4.4 Seasonality conclusions**
+- There is a clear monthly seasonal component: sales increase between January and March and then decrease between April and November. Finally there's another increase in December.
+
+
+## **5. Correlation analysis**
+Now we are going to analyze the correlation of the series with its previous lags.
+
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+par(mfrow = c(1,2))
+acf(USVSales10, lag.max = 60)
+pacf(USVSales10, lag.max = 60)
+```
+
+- There is a very notorious linear decay in the autocorrelation function chart, indicating that the series is not stationary (due to its trend), so if we use an ARIMA model we will have to differenciate.
+- There is a lot of correlation with the first non-seasonal lag and the first seasonal lag.
+
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+ts_lags(USVSales10)
+```
+
+- We can see there's a fairly **strong correlation** of the series with its **first seasonal and non-seasonal lags** (lag 1 and 12).
+
+## 6. **Training and testing partitions.**
+Since we want to forecast the following 12 observations, we divide our time series into a training partition with n-12 observations (n is the total number of observations), and our testing partition with 12 observations.
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+USVSales10_division <- ts_split(USVSales10, sample.out = 12)
+train <- USVSales10_division$train
+test <- USVSales10_division$test
+```
+
+## 7. **First approach: Forecasting with a Holt-Winters model**
+### **7.1 Tuning the hyperparameters**
+Holt-Winters is a forecasting model that depends of three parameters (alpha, beta and gamma), which are kind of the weights of an advanced moving average technique.
+In order to find the best parameters we use a grid search approach: this consists on training the Holt-Winters model with different combinations of parameters (in our case iterating with values from 0 to 1, by = 0.1) in different training partitions (six in our case), and testing them (in our case we test them in 12 observations). Finally we obtain an error metric from the testing partition, which tells us how well is the model fitting the data (in our case we will rely on the MAPE, Mean Absolute Percentage Error) and we select the combination of parameters that gives us the minimum error rate among all.
+To do this, we use the ts_grid() function, which performs the grid search almost automatically. 
+
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+shallow_grid <- ts_grid(train,
+                        model = "HoltWinters",
+                        periods = 6,
+                        window_space = 6,
+                        window_test = 12,
+                        hyper_params = list(alpha = seq(0, 1, 0.1),
+                                            beta = seq(0, 1, 0.1),
+                                            gamma = seq(0, 1, 0.1)),
+                        parallel = TRUE)
+grid_df_2 <- shallow_grid$grid_df[,-4:-9]
+names(grid_df_2) <- c("alpha", "beta", "gamma", "MAPE")
+formattable(head(grid_df_2, 10), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), list("alpha" = formatter(
+              "betta", style = ~ style(color = "grey",font.weight = "bold")), 
+              "gamma" = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+              "MAPE" = formatter("span", style = ~ style(color = "grey", font.weight = "bold"))))
+```
+
+The best model seems to be the Holt-Winters with alpha = 0.1, beta = 0.2, and gamma = 1, because it gives the lowest MAPE (mean column in he table)
+
+We can also see the results by a 3D plot, with 3 axis, alpha, beta and gamma, and the colour representing the MAPE score of each combination. 
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+plot_grid(shallow_grid, type = "3D")
+```
+
+### **7.2 Training the model**
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+md_hw <- HoltWinters(train, 
+                     alpha = shallow_grid$alpha,
+                     beta = shallow_grid$beta,
+                     gamma = shallow_grid$gamma)
+fc_hw <- forecast(md_hw, h = 12)
+accuracy(fc_hw, test)
+test_forecast(USVSales10,
+              forecast.obj = fc_hw,
+              test = test)
+```
+
+- The model **doesn't seem to be overfitting** since the error metrics are very similar in the training and testing partitions. Also we can see that the values of error are pretty low.
+- On the other hand, the visualization of the fitting shows us that the model is capturing pretty well the patterns in the data.
+
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+checkresiduals(md_hw)
+```
+
+- The residuals are pretty independent, and the correlation between the residuals and their 14th and 23th lag, seems to be caused by chance. -
+- They are fairly normally distributed and pretty similar to white noise, but with some patterns (this indicates that the model may have not captured all the patterns in the data).
+
+## **8. Second approach: Forecasting with SARIMA (Seasonal Arima) models.**
+### **8.1 Autocorrelation and partial autocorrelation functions (without differencing)**
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+par(mfrow = c(1,2))
+acf(USVSales10, lag.max = 60)
+pacf(USVSales10, lag.max = 60)
+```
+
+- There is a very notorious linear decay in the autocorrelation function chart, indicating that the series is not stationary (due to its trend), so we will have to differenciate to make the series stationary (since it is a requisite of the ARIMA model).
+- There is a lot of correlation with the first non-seasonal lag and the first seasonal lag (see the pacf plot)
+
+If we take a look to the series, we will see that it is not stationary (its mean and variance are not stable):
+
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+autoplot(USVSales10, fill = "red") + ggtitle("US Monthly Vehicle Sales") +  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+axis.text = element_text(size = 13), axis.title = element_text(size = 14)) + 
+xlab("Year") + ylab("Number of sold cars")  + xlim(as.Date(c("2010-01-01", "2019-09-01")))
+```
+
+### **8.2 Autocorrelation and partial autocorrelation functions (first orders non-seasonal differencing)**
+In order to stabilize the mean and variance, we difference the series respect to its first non-seasonal lag (lag 1).
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+USVSales10_d1 <- diff(USVSales10, 1)
+par(mfrow = c(1,2))
+acf(USVSales10_d1, lag.max = 60)
+pacf(USVSales10_d1, lag.max = 60)
+```
+- There's still a lot of linear decay in the acf, indicating that the trend hasn't been removed.
+- A lot of correlation with its first non-seasonal and seasonal lag.
+
+If we take a look to the series, we will see that it has stabilized its mean, but its variance is still not stable.
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+autoplot(USVSales10_d1, fill = "red") + ggtitle("US Monthly Vehicle Sales - First order non-seasonal difference") +  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+axis.text = element_text(size = 13), axis.title = element_text(size = 14)) + 
+xlab("Year") + ylab("Number of sold cars")  + xlim(as.Date(c("2010-01-01", "2019-09-01")))
+```
+
+- Since the variance it still is not stable we will have to differenciate again.
+
+### **8.3 Autocorrelation and partial autocorrelation functions (first order non-seasonal and seasonal differencing)**
+Since the series is very correlated with its first seasonal lag, we differenciate it respecting the 12th lag.
+```{r, message = FALSE, fig.align="center", fig.height = 6, fig.width = 10, warning = FALSE}
+USVSales10_d1_d12 <- diff(USVSales10_d1, 12)
+par(mfrow = c(1,2))
+acf(USVSales10_d1_d12, lag.max = 60)
+pacf(USVSales10_d1_d12, lag.max = 60)
+```
+
+- We can see that the linear decay is not visible in the acf and that there's a lot of correlation with its first seasonal and non-seasonal lags (lag 1, lag 12 in the pacf).
+- We can see that both the acf and pacf tail off, so **it will be an ARMA process**.
+
+If we take a look to the series, we will see that the mean and variance are pretty constant over time, and **we have converted the series into a stationary process**:
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+autoplot(USVSales10_d1_d12, fill = "red") + ggtitle("US Monthly Vehicle Sales - First order seasonal and non-seasonal difference") +  
+theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+axis.text = element_text(size = 13), axis.title = element_text(size = 14)) + 
+xlab("Year") + ylab("Number of sold cars")  
+```
+
+- Now that the series is stationary with acf and pacf both tailing off, and that we have had to differenciate respect to the first seasonal and non-seaonal lags, 
+we know that the most suitable model will be an **SARIMA(p, d = 1, q)(P, D = 1, Q).**
+
+### **8.4 Tuning the hyperparameters**
+We create a function that trains SARIMA models in the training partition using all the possible combinations of p,d,q,P,D,Q (knowing that p=1 and P=1), returns us its AIC (Akaike's Information Criteria) and finds the models which provide less AIC (the models that perform better). 
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+p <- 0:2
+q <- 0:2
+P <- 0:2
+Q <- 0:2
+d <- D <- 1
+arima_grid <- expand.grid(p,d,q,P,D,Q)
+names(arima_grid) <- c("p", "d", "q", "P", "D", "Q")
+arima_grid$k <- rowSums(arima_grid) 
+arima_grid <- filter(arima_grid, k <= 6)
+arima_search2 <- function(x){
+        for(i in 1:nrow(x)){
+                md <- NULL
+                md <- arima(train, order = c(x$p[i], 1, x$q[i]), 
+                            seasonal = list(order = c(x$P[i], 1, x$Q[i])))
+                x$AIC[i] <- md$aic
+                x <- x %>% arrange(AIC)
+        }
+        x
+}
+best_arimas <- arima_search2(arima_grid)
+best_arimas <- best_arimas[,-7]
+
+formattable(head(best_arimas, 10), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), list("p" = formatter(
+              "d", style = ~ style(color = "grey",font.weight = "bold")), 
+              "q" = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+              "P" = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+              "D" = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+              "Q" = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+              "AIC" = formatter("span", style = ~ style(color = "grey", font.weight = "bold"))))
+
+```
+
+We can see that the best model seems to be an SARIMA(0,1,1)(2,1,1) with an AIC of 1040.113.
+
+### **8.5 Training the model**
+#### **SARIMA(0,1,1)(2,1,1)**
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+md_arima1 <- arima(train, order = c(0,1,1), seasonal = list(order = c(2,1,1)))
+fc_arima1 <- forecast(md_arima1, h = 12)
+accuracy(fc_arima1, test) 
+test_forecast(USVSales10, 
+              forecast.obj = fc_arima1,
+              test = test)
+checkresiduals(md_arima1)
+```
+
+- It has a higher MAPE in the testing set than in the HoltWinters.
+- Residuals are pretty normally distributed, and the correlation with their past lags seems to be due to chance
+
+#### **auto.arima() model**
+Now we try try to fit the SARIMA model that suggests us the auto.arima() function, and we will compare it to our SARIMA model.
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+md_arima_auto <- auto.arima(train) 
+md_arima_auto
+```
+The function recommends an **SARIMA(0,1,1)(0,1,0)** with an AIC of 1049.77 (higher than our model's AIC)
+
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+fc_arima_auto <- forecast(md_arima_auto, h = 12)
+accuracy(fc_arima_auto, test)
+test_forecast(USVSales10, 
+              forecast.obj = fc_arima_auto,
+              test = test)
+checkresiduals(md_arima_auto)
+```
+
+- It has lower error values than our model, but higher AIC (which is the main criteria to select the best ARIMA model).
+- Residuals seem to be less normally distributed and more correlated with their lags, than in our SARIMA(0,1,1)(2,1,1).
+- After comparing both models, we can see that our model better in terms of AIC and in terms of residual analysis.
+
+## **9. Choosing the final model**
+The best two candidates are the Holt-Winters model and our SARIMA(0,1,1)(2,1,1). 
+Since they're different models we will compare them based on their error scores (that are the result of the difference between the forecasted test values and the real test values), and based on the residuals analysis.
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+accuracy(fc_hw, test)
+accuracy(fc_arima1, test) 
+```
+The Holt-Winters has **less error rates** in general than the SARIMA model.
+
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+checkresiduals(md_hw)
+checkresiduals(md_arima1)
+```
+
+The Holt-Winters model residuals seem more normally distributed than the ARIMA. Non of both residuals are white noise, and both of the models residuals seem pretty independent.
+
+### **9.1 Final decision**
+Since there isn't a lot of difference in their residuals (non of both models' residuals are white noise), I have focused on the error metrics to select the best model.
+The model that performs better in terms of less error is the Holt-Winters, and that's why I will use it as the final model to do the forecast.
+
+## **10. Final Forecast using Holt-Winters**
+```{r, message = FALSE, fig.align="center", fig.width = 10, warning = FALSE}
+final_md_hw <- HoltWinters(USVSales10,alpha = shallow_grid$alpha,
+                           beta = shallow_grid$beta,
+                           gamma = shallow_grid$gamma)
+final_fc_hw <- forecast(final_md_hw, h = 12)
+
+autoplot(final_fc_hw, size = 0.65,  fill = "black", conf.int.alpha = 0.15, conf.int.fill = "red", predict.colour = "red") + 
+        ggtitle("US Vehicle Sales - Forecast using Holt-Winters") + 
+        theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+              axis.text = element_text(size = 13), axis.title = element_text(size = 14)) + 
+        xlab("Year") + ylab("Number of sold cars")
+
+autoplot(final_fc_hw, size = 0.65, fill = "black", predict.colour = "red", conf.int.alpha = 0.15, conf.int.fill = "red") + 
+        theme_get() + ggtitle("US Vehicle Sales - Forecast using Holt-Winters (zoomed)") + xlab("Year") + ylab("Number of sold Vehicles")+
+        xlim(as.Date(c("2016-01-01", "2020-09-01"))) + ylim(c(1000,1800)) + 
+        theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
+              axis.text = element_text(size = 13), axis.title = element_text(size = 14)) + 
+        xlab("Year") + ylab("Number of sold cars") 
+```

@@ -1,10 +1,10 @@
-name: "my-website"
+name: "Time Series Analysis with R"
 output_dir: "."
 navbar:
-  title: "My Website"
+  title: "Time Series Analysis with R"
   left:
-    - text: "Home"
-      href: index.html
+    - text: "Unemployment in Spain"
+      href: unemployment_forecast.html
     - text: "About"
       href: about.html
 output:
