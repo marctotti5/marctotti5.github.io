@@ -12,7 +12,7 @@ navbar:
     - text: "US Car Sales Forecast"
       href: car_sales_forecast.html
     - text: "About"
-      href:about.html
+      href: about.html
 output:
   html_document:
     theme: united
