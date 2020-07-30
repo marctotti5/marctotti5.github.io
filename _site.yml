@@ -10,6 +10,8 @@ navbar:
         - text: "NBA Salary Calculator"
           href: nba_project.html
     - text: "Classification"
+      menu:
+        - text: "Other projects"
     - text: "Time Series Analysis"
       menu:
         - text: "Unemployment in Spain"
