@@ -1,0 +1,487 @@
+---
+title: NBA Salary Prediction
+author: Marc Pastor
+date: 30th June 2020
+output: html_document
+theme: lumen
+---
+<style>
+pre {
+  font-size: 14px;
+}
+</style>
+
+## **NBA Salary Calculator**
+In this project I am going to develop a model to predict the average salary of an NBA player, based on multiple variables and using tree methods. I will be using a regression tree as the base model, as well as bagging and random forests. The goal of this project is to create an "NBA Salary Calculator" through a Shiny App which is already in development.
+
+
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE, echo = FALSE}
+library(knitr)
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/SALARIOS NBA/nbafoto.jfif")
+```
+
+
+
+## **The Data**
+The data to train the model has been obtained from [data.world]("https://data.world/datadavis/nba-salaries"). 
+It consists of two datasets: the *players* dataset and the *salaries_1985to2018* table. 
+Now we load these two datasets into two new variables:
+```{r}
+setwd("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/SALARIOS NBA/data")
+players <- read.csv("./players.csv", sep = ",", dec = ".")
+salaries <- read.csv("./salaries_1985to2018.csv", sep = ",", dec = ".")
+```
+
+### **Players dataset**
+This dataset contains the 35 following variables:
+```{r}
+str(players)
+```
+
+### **Salaries dataset**
+This dataset contains the 7 following variables:
+```{r}
+str(salaries)
+```
+
+## **Data Wrangling**
+First of all I load three packages that will come in handy during the cleaning process. 
+```{r, echo = TRUE, results = "hide", message = FALSE}
+library(tidyverse)
+library(stringr)
+library(lubridate)
+```
+
+Secondly I use the lubridate library to convert the players birthdate to a "month-year-day" format (european), and extract the year, month, day, weekday of the players birthday.
+```{r}
+players$birthDate <- mdy(players$birthDate)
+players$birthyear <- year(players$birthDate)
+players$birthmonth <- month(players$birthDate)
+players$birthday <- day(players$birthDate)
+players$birthweekday <- wday(players$birthDate, label = F)
+```
+
+Since I am Spanish, I change the units system, for the weight and height variables (from lbs to kgs, and from inches to centimeters, respectively).
+```{r}
+players$height_ft <- as.numeric(sapply(str_split(players$height, pattern = "-"), "[[", 1))
+players$height_inches <- as.numeric(sapply(str_split(players$height, pattern = "-"), "[[", 2))
+players$height_cm <- 30.48 * players$height_ft + 2.54 * players$height_inches 
+players$weight <- as.numeric(sapply(str_split(players$weight, pattern = "lb"), "[[", 1))
+players$weight_kgs <- players$weight * 0.453592 
+```
+
+Since the data in the birthPlace variable contains data in the following format: "San Francisco, California" (two components), or "Eslovenia" (one component), I use a for loop to separate the two words (in case of having to components) or repeting the first word (in case of having one word). This allows me to standarize the format and to create two new variables (birthPlace_city and birthPlace_state_country), which could be useful.
+```{r}
+prueba <- str_split(players$birthPlace, pattern = ", ") 
+for(i in seq_along(prueba)){
+        if (length(prueba[[i]]) == 1){
+                prueba[[i]][2] <- prueba[[i]][1]
+        } else{
+                
+        }
+}
+
+players$birthPlace_city <- sapply(prueba, "[[", 1)
+players$birthPlace_state_country <- sapply(prueba, "[[", 2)
+
+```
+
+Then I create a country column with the help of the countrycode package, which includes the official name in English of all countries in the world. For that, I initialize a new variable in the players dataset (called birthPlace_country), setting it to 0. Then I use a for loop which extracts the state name (from the variable birthPlace_state_country) and if the ith observation of this variable in the dataset is also in the state.name vector (a vector containing all the US states names), it changes that value for "United States", because I am more interested in the country rather than the state. This way, any observation belonging to any state from the USA, will be substituted with the "United States" (country name that I was interested on). If the ith observation of the birthPlace_state_country is not a US state (it is the name of another country), then it will remain the same.
+```{r}
+library(datasets)
+library(countrycode)
+players$birthPlace_country <- 0
+
+for(i in seq_along(players$birthPlace_state_country)){
+        if(players$birthPlace_state_country[i] %in% state.name){
+                players$birthPlace_country[i] <- "United States"
+        } else{
+                players$birthPlace_country[i] <- players$birthPlace_state_country[i]
+        }
+}
+
+```
+
+Now I look up those country names that have spell mistakes. For that, I create a vector containing all the country names in the world, using the countrycode package and the function %notin%, that will come in handy when filtering the results. Then I check all the country names that are misspelled (line 100), by checking the names in the country_names vector. Then I substitute the wrong country names with the correct name. Finally I check again all the country_names, using the same command, and the only one that is detected as misspelled is "Czech Republic", because in the country_names vector it is written as Czechoslovakia (nowadays extinct)
+```{r}
+country_names <- levels(as.factor(countryname_dict$country.name.en)) # vector containing all country names
+'%notin%' <- Negate('%in%') # we create this function in order to filter easily
+distinct(players[players$birthPlace_country != "" & players$birthPlace_country %notin% country_names , c(33,34)])
+
+players$birthPlace_country <- gsub("FYR Macedonia", "North Macedonia", players$birthPlace_country)
+players$birthPlace_country <- gsub("District of Columbia", "United States", players$birthPlace_country)
+players$birthPlace_country <- gsub("U.S. VirgIslands", "Congo - Brazzaville", players$birthPlace_country)
+players$birthPlace_country <- gsub("Bosnia and Herzegovina", "Bosnia & Herzegovina", players$birthPlace_country)
+players$birthPlace_country <- gsub("Democratic Republic of the Congo", "Congo - Brazzaville", players$birthPlace_country)
+players$birthPlace_country <- gsub("Saint Lucia", "St. Lucia", players$birthPlace_country)
+players$birthPlace_country <- gsub("Trinidad and Tobago", "Trinidad & Tobago", players$birthPlace_country)
+players$birthPlace_country <- gsub("Saint Vincent and the Grenadines", "St. Vincent & Grenadines", players$birthPlace_country)
+players$birthPlace_country <- gsub("Islamic Republic of Iran", "Iran", players$birthPlace_country)
+players$birthPlace_country <- gsub("Republic of the Congo", "Congo - Brazzaville", players$birthPlace_country)
+players$birthPlace_country <- gsub("Republic of Korea", "South Korea", players$birthPlace_country)
+players$birthPlace_country <- gsub("United Republic of Tanzania", "Tanzania", players$birthPlace_country)
+
+distinct(players[players$birthPlace_country != "" & players$birthPlace_country %notin% country_names , c(33,34)]) 
+```
+
+Now I change the values in the draft_pick and draft_round variables because they are inconsistent, and I will try to convert them to an homogeneous format. First we observe the different levels of the variable with the following code:
+```{r}
+players$draft_pick %>% as.factor() %>% levels()
+```
+
+We can see that the final levels ("and Baltimore Bullets", "and Boston Celtics", etc) have a similar format (all of them contain the expression "and"). We use this fact in the gsub function, in order to convert those values to a homogeneous format ("ith overall"). Now we use the same method to substitute those observations containing "rd", "nd", "st", with "th", in order to have homogeneous data.
+```{r}
+players[grepl("and", players$draft_pick), "draft_pick"] <- "0th overall" 
+players[players$draft_pick == "", "draft_pick"] <- "0th overall"
+players$draft_pick <- str_replace_all(players$draft_pick, "st|nd|rd", "th") 
+```
+
+Now I filter those rows that for the same variable (draft_pick), are not in the "ith overall" format, and since they don't show any information of the draft_pick, I substitute the value with "Oth overall", which I will filter out later. Finally, when all observations of the variable are in a homogeneous format, I delete the " overall" part of each observation, and then the "th" and extract only the number. 
+```{r}
+players[!grepl('th', players$draft_pick), "draft_pick"]
+players[!grepl('th', players$draft_pick), "draft_pick"] <- "0th overall"
+players$draft_pick <- gsub(" overall", "", players$draft_pick)
+players$draft_pick <- gsub("th", "", players$draft_pick)
+```
+
+Now I check if all the levels are homogeneous:
+```{r}
+players$draft_pick %>% as.factor() %>% levels()
+```
+
+Now I do the same with the draft_round variable, but now using a for loop:
+```{r}
+players$draft_round <- str_replace_all(players$draft_round, "st|nd|rd", "th")
+players[!grepl('th', players$draft_round), "draft_round"] <- "0th overall"
+players$draft_round <- as.factor(players$draft_round)
+players$draft_round %>% as.factor() %>% levels() # we use this in order to see which are the patterns to substitute
+
+levels_draftround <- levels(as.factor(players$draft_round))
+for(i in seq_along(levels_draftround)){
+        patterns <- c(" overall", " routh", " in the 1971 Supplemental Hathship Draf", " roun")
+        for(j in seq_along(patterns)){
+                if(str_detect(levels_draftround[i], patterns[j] ) == TRUE){
+                        levels_draftround[i] <- gsub(patterns[j], "", levels_draftround[i])
+                } else {
+                        
+                } 
+        }
+        
+}
+levels_draftround <- gsub("th", "", levels_draftround)
+levels(players$draft_round) <- levels_draftround
+```
+
+Now we check the draft team variable, but we will solve the problem of NA's and empty values later
+```{r}
+players$draft_team %>% as.factor() %>% levels()
+```
+
+Now I delete the useless variables in the salaries dataset, and rearrange the columns. 
+```{r}
+salaries$league <- NULL
+salaries$season <- NULL
+salaries <- salaries[, c(1,4,3,2,5)]
+head(salaries)
+library(modeest)
+```
+
+Then I create dummy variables for each team, with the value 1 if the player  played in that team during a year, in order to know how many years did the player play for each team. Then I change the name of the dummy variables with the for loop.
+```{r}
+library(fastDummies)
+levels(as.factor(salaries$team))
+salaries <- dummy_cols(salaries, select_columns = "team")[,-6] # I remove the 6th column because it didn't represent any team
+salaries$team <- NULL
+# Now we cange the names of the dummy variables
+for(i in 5:ncol(salaries)){
+        colnames(salaries)[i] <- gsub("team", "yearsplayed", colnames(salaries)[i])
+        colnames(salaries)[i] <- gsub(" ", "", colnames(salaries)[i])
+}
+head(salaries)
+```
+
+Now I separate the salaries dataframe into two dataframes, to ease the process of summarizing. This gives me the carreer average salary for each player, as well as the number of years he played for each team.
+```{r}
+salaries_1 <- salaries[, c(1, 4)]
+salaries_2 <- salaries[, c(1, 5:ncol(salaries))]
+salaries_1 <- salaries_1 %>% group_by(player_id) %>% summarize(carreer_avg_salary = mean(salary)) %>% as.data.frame()
+salaries_2 <- salaries_2 %>% group_by(player_id) %>% summarise_all("sum") %>% as.data.frame()
+salaries <- inner_join(salaries_1, salaries_2, by = "player_id")
+head(salaries)
+```
+
+Finally I use the same name for the primary key column (player_id) and merge the two datasets (players and salaries) into de nba_dataset
+```{r}
+colnames(players)[1] <- "player_id"
+nba_dataset <- inner_join(players, salaries, by = "player_id") 
+head(nba_dataset)
+```
+
+Then I delete the unnecessary columns and rearrange the columns of the new dataset
+```{r}
+nba_dataset$birthPlace <- NULL
+nba_dataset$height <- NULL
+nba_dataset$weight <- NULL
+nba_dataset$height_ft <- NULL
+nba_dataset$height_inches <- NULL
+nba_dataset$birthPlace_city <- NULL
+nba_dataset$birthPlace_state_country <- NULL
+nba_dataset$highSchool <- NULL
+
+
+nba_dataset <- nba_dataset[, c(1, 18, 21, 22, 23, 24, 25, 26, 27, 13, 17, 
+                               14, 15, 16, 19, 20, 28, 3, 4, 5, 6, 7, 
+                               8, 9, 10, 11, 12, 29:ncol(nba_dataset))] 
+head(nba_dataset)
+
+```
+
+Now we delete the missing and strange values, and we also convert the columns to their most adequate data type. 
+```{r}
+nba_dataset[, c(1, 2, 9, 10, 14, 15, 16)] <-  data.frame(lapply(nba_dataset[, c(1, 2, 9, 10, 14, 15, 16)], as.factor)) # Categorical Data
+lapply(nba_dataset[, c(1,2,9,10,14,15,16)], levels) # we observe the levels in order to spot strange values
+# Now we change those strange values with "Unknown" followed by the column name
+
+nba_dataset[, c(1, 2, 9, 10, 14, 15, 16)] <-  data.frame(lapply(nba_dataset[, c(1, 2, 9, 10, 14, 15, 16)], as.character)) # we convert them to character again
+
+nba_dataset[, -c(1, 2, 9, 10, 14, 15, 16)] <- data.frame(lapply(nba_dataset[, -c(1, 2, 9, 10, 14, 15, 16)], as.numeric)) # these are the numeric columns
+for(j in c(1, 2, 9, 10, 14, 15, 16)){
+        for(i in 1 : nrow(nba_dataset)){
+                if(nba_dataset[i, j] == ""){
+                        nba_dataset[i, j] <- paste("Unknown", colnames(nba_dataset)[j])
+                }
+        }
+}
+```
+
+### **Dealing with NA's (numeric data)**
+First we check if there are NA's in the data:
+```{r}
+head(nba_dataset[is.na(nba_dataset), ])
+```
+
+Now we substitute the NA's with the median column value for the players of the same birthyear using two nested for loops. I choose the median and not the mean, because the median is less afected by outliers.
+```{r}
+for(j in 1:ncol(nba_dataset)){
+        years <- vector()
+        for(i in 1:nrow(nba_dataset)){
+                if(is.numeric(nba_dataset[, j]) == TRUE){
+                        if(is.na(nba_dataset[i, j]) == TRUE){
+                                years[i] <- nba_dataset$birthyear[i]
+                                nba_dataset[i, j] <- nba_dataset[complete.cases(nba_dataset) & nba_dataset$birthyear == years[i], j] %>% median() 
+                        }
+                }
+        }
+
+}
+```
+
+Now we check that there are no NA's.
+```{r}
+head(nba_dataset[is.na(nba_dataset), ])
+```
+
+I use the countrycode library to obtain the continent where each player was born, and I also delete some unnecessary columns
+```{r}
+library(countrycode)
+
+nba_dataset$birthPlace_continent <- countrycode(sourcevar = nba_dataset[, "birthPlace_country"], 
+                                     origin = "country.name", destination = "continent") 
+nba_dataset <- nba_dataset[, -c(1, 2, 6, 9, 10)]
+nba_dataset <- nba_dataset[, c(61, 1:60)]
+nba_dataset <- nba_dataset[, -c(24:61)]
+```
+
+Finally we have cleaned our dataset, and we are ready to start analyzing and modelling. 
+```{r}
+head(nba_dataset)
+```
+
+## **Exploratory Data Analysis**
+First I check the structure and summary of the nba_dataset, and then check the presence of missing values and NA's.
+```{r}
+str(nba_dataset)
+summary(nba_dataset)
+head(nba_dataset[is.na(nba_dataset), ]) # there are no NA's 
+head(nba_dataset[!complete.cases(nba_dataset), ]) # there are no missing values, since we have substituted them earlier
+```
+
+Now I check the variable that I want to predict (carreer_avg_salary), in order to detect trends and extract insights. The first histogram, corresponds to the log of carreer_avg_salary. It clearly shows us that the variable is pretty gaussian, because most of the players earn between exp(12.5) and exp(15) dollars, (268337 and 3269017$)
+```{r, fig.align="center", fig.height = 5, fig.width = 10}
+ggplot(data = nba_dataset, aes(x = log(carreer_avg_salary))) + 
+        geom_histogram(binwidth = 0.5, color = "black", fill = "skyblue") + 
+        ggtitle("NBA Carreer Average Salary (Log scale)") + 
+        theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+              axis.title = element_text(hjust = 0.5, size = 12),
+              axis.text = element_text(size = 12)) + 
+        xlab("Log of Carreer Average Salary") + ylab("Number of players")
+```
+
+
+### **Categorical variables**
+This other chart shows us the average salary of a player depending on its birth continent. All of the continents seem to have very similar values, being players from oceania the players that on average make more money. This is for sure because most of the players are American, and as the number of players increases, the average value decreases, while maybe there are fewer players from Oceania that on average have higher salaries. Again the majority of the players have salaries (log variable) between 12.5 and 15.
+```{r, fig.align="center", fig.height = 5, fig.width = 10}
+ggplot(data = nba_dataset, aes(x = birthPlace_continent, y = log(carreer_avg_salary))) + 
+        geom_jitter(aes(col = birthPlace_continent), alpha = 0.13) +
+        geom_boxplot(alpha = 0.6, aes(fill = birthPlace_continent, col = birthPlace_continent)) +
+        ggtitle("NBA Carreer Average Salary (by birth Continent)") +
+        theme(plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+              axis.title = element_text(hjust = 0.5, size = 14),
+              axis.text = element_text(size = 13), legend.position = "none") + 
+        xlab("Birth Continent") + ylab("Carreer Average Salary (Log scale)")
+```
+
+There doesn't seem to be any clear pattern in this chart, and again, most of the players lay between the 12.5 and 15 log values of salary.
+```{r, fig.align="center", fig.height = 5, fig.width = 10}
+ggplot(data = nba_dataset, aes(x = position, y = log(carreer_avg_salary))) + 
+        geom_boxplot(alpha = 0.6, aes(fill = position, col = position)) +
+        ggtitle("NBA Carreer Average Salary (by position)") +
+        theme(plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+              axis.title = element_text(hjust = 0.5, size = 14),
+              axis.text.x = element_blank(),
+              legend.position = "bottom",
+              legend.title = element_blank()) + 
+        xlab("Position") + ylab("Carreer Average Salary (Log scale)")
+```
+
+Finally we check if the shooting hand affects the salary, and as we can see, it has little impact.
+```{r, fig.align="center", fig.height = 5, fig.width = 10}
+ggplot(data = filter(nba_dataset, shoots != "Left Right"), aes(x = shoots, y = log(carreer_avg_salary))) + 
+        geom_boxplot(alpha = 0.6, aes(fill = shoots, col = shoots)) +
+        ggtitle("NBA Carreer Average Salary (by shooting hand)") +
+        theme(plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+              axis.title = element_text(hjust = 0.5, size = 14),
+              axis.text.x = element_blank(),
+              legend.position = "bottom",
+              legend.title = element_blank()) + 
+        xlab("Shoots") + ylab("Carreer Average Salary (Log scale)")
+```
+
+### **Numeric variables**
+Now we check for correlation between the numeric variables and carreer_avg_salary. As we can see, the most correlated variables are all related to basketball stats, such as the PTS, WS, TRB, etc. These stats summarise the performance of a player in the court. This is logic, since the salary of a player depends on his performance. 
+```{r, fig.align="center", fig.height = 5, fig.width = 10}
+library(corrr)
+numeric_correlations <- nba_dataset[, -c(1, 10, 11, 12)] %>% correlate() %>% focus(carreer_avg_salary)
+ggplot(data = numeric_correlations, aes(x = reorder(rowname, carreer_avg_salary), y = carreer_avg_salary)) + 
+        geom_bar(aes(fill = carreer_avg_salary), stat = "identity") + 
+        scale_fill_gradient(low = "blue", high = "red") +
+        ggtitle("Correlation of carreer_avg_salary and the other numeric variables") +
+        theme(plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+              axis.title = element_text(hjust = 0.5, size = 14),
+              axis.text.x = element_text(size = 14, angle = 90),
+              legend.position = "none",
+              legend.title = element_blank()) + 
+        xlab("Numeric variable") + ylab("Correlation") 
+```
+
+## **Modeling**
+In order to predict the carreer_avg_salary variable I try three different tree based methods: Regression Trees, Bagging and Random Forests. 
+
+### **Regression Tree**
+I load the tree package, create a "salary" variable containing all the salaries from all players in the dataset. Then I create random training and testing partitions using a seed (in order to increase reproducibility), and train the model in the training partition. 
+```{r, warning=FALSE}
+library(tree)
+salary <- nba_dataset$carreer_avg_salary
+set.seed(2)
+train <- sample(1:nrow(nba_dataset), nrow(nba_dataset)/2)
+nba_dataset.test <- nba_dataset[-train, ]
+salary.test <- salary[-train]
+tree.nba_dataset <- tree::tree(carreer_avg_salary ~., data = nba_dataset, subset = train)
+```
+
+Now I use cross validation to apply cost complexity pruning and the result tells me that the best tree is the unpruned one (aka the one I obtained in the previous code chunk)
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE}
+cv.nba_dataset <- cv.tree(tree.nba_dataset) 
+plot(cv.nba_dataset$size, cv.nba_dataset$dev, type = "b", main = "Regression Trees: MSE comparison",
+     xlab = "Tree Size", ylab = "Mean Squared Error") 
+```
+
+The best tree is the unpruned one:
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE}
+plot(tree.nba_dataset)
+text(tree.nba_dataset, pretty = 0)
+```
+
+Since the best tree is the unpruned tree, we predict the results with it, and obtain the RMSE (Root Mean Squared Error), as the root of the mean of the squared error between the model prediction and the real test value. I have chosen the RMSE instead of the MSE because it is a smaller and more interpretable quantity. 
+```{r}
+yhat.tree <- predict(tree.nba_dataset, nba_dataset.test)
+rmse_tree <- mean((yhat.tree - salary.test) ^ 2) %>% sqrt() 
+```
+
+Finally we plot the predicted and real values using a scatterplot, to see how is the model performing. As we can see it performs very poorly (ideally there should be a linear relationship), and so I'll try to improve the performance using bagging and random forests. 
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE}
+plot_tree_data <- data.frame(test_value = salary.test, tree.pred = yhat.tree)
+tree_plot <- ggplot(data = plot_tree_data, aes(x = log(test_value), y = log(tree.pred), color = test_value)) + geom_point() + 
+        scale_color_gradient(low = "blue", high = "red") +
+        ggtitle("Regression Tree: Prediction Accuracy (Log Scale)") +
+        theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+              axis.title = element_text(hjust = 0.5),
+              legend.position = "none",
+              legend.title = element_blank()) + 
+        xlab("Test Value (Log)") + ylab("Predicted Value (Log)") 
+tree_plot
+```
+
+### **Bagging**
+In order to use the bagging algorithm I load the *randomForest* package, create training and testing partitions and train the model. Then I create a variable with the predicted values and another one to store the RMSE.
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE}
+library(randomForest)
+set.seed(1)
+bag.nba_dataset <- randomForest(carreer_avg_salary ~., data = nba_dataset, subset = train, mtry = ncol(nba_dataset) - 1, keep.forest = T) 
+yhat.bag <- predict(bag.nba_dataset, newdata = nba_dataset[-train, ])
+rmse_bagging <- mean((yhat.bag - nba_dataset.test$carreer_avg_salary) ^ 2) %>% sqrt()
+```
+
+Finally I plot the same scatterplot (real vs predicted values), on a logged version of both (since it is more interpretable). As we can see the accuracy of the model is much more higher than in the single tree, and it already looks very robust. There is a clear linear relationship between the predicted and the real values, and this indicated that for every point the model is predicting values very close to the real test number. 
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE}
+plot_bag_data <- data.frame(test_value = salary.test, bag.pred = yhat.bag)
+bag_plot <- ggplot(data = plot_bag_data, aes(x = log(test_value), y = log(bag.pred), color = test_value)) + geom_point() + 
+        scale_color_gradient(low = "blue", high = "red") +
+        ggtitle("Bagging: Prediction Accuracy (Log Scale)") +
+        theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+              axis.title = element_text(hjust = 0.5),
+              legend.position = "none",
+              legend.title = element_blank()) + 
+        xlab("Test Value (Log)") + ylab("Predicted Value (Log)") 
+bag_plot
+```
+
+### **Random Forest**
+I use the same methodology than in the bagging implementation. This model looks even more robust than the previous due to the stronger linear relationship between predicted and the real values. 
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE}
+set.seed(1)
+rf.nba_dataset <- randomForest(carreer_avg_salary ~., data = nba_dataset, 
+                               subset = train, mtry = (ncol(nba_dataset) - 1) / 3, 
+                               keep.forest = T) 
+yhat.rf <- predict(rf.nba_dataset, newdata = nba_dataset[-train, ])
+rmse_randomforest <- mean((yhat.rf - nba_dataset.test$carreer_avg_salary) ^ 2) %>% sqrt()
+plot_rf_data <- data.frame(test_value = salary.test, rf.pred = yhat.rf)
+rf_plot <- ggplot(data = plot_rf_data, aes(x = log(test_value), y = log(rf.pred), color = test_value)) + geom_point() + 
+        scale_color_gradient(low = "blue", high = "red") +
+        ggtitle("Random Forest: Prediction Accuracy (Log Scale)") +
+        theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+              axis.title = element_text(hjust = 0.5),
+              legend.position = "none",
+              legend.title = element_blank()) + 
+        xlab("Test Value (Log)") + ylab("Predicted Value (Log)") 
+rf_plot
+```
+
+## **Model Comparison and conclusions**
+Finally I plot the previous charts as well as the table comparing the RMSE of each model, showing that the best model in performance is the Random Forest. 
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE}
+rmse_comparison <- data.frame(Tree = round(rmse_tree), 
+                              Bagging = round(rmse_bagging),
+                              "Random forest" = round(rmse_randomforest))
+library(ggpubr)
+rmse_comparison_table <- ggtexttable(rmse_comparison, rows = NULL) 
+final_chart <- ggarrange(tree_plot, bag_plot, rf_plot, rmse_comparison_table, labels = c("", "", "", "Model RMSE Comparison"))
+final_chart
+
+```
+
+##  **THANKS FOR YOUR ATTENTION**
+```{r, fig.align="center", warning = FALSE, echo = FALSE}
+library(knitr)
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/SALARIOS NBA/meme2.jpg")
+```
