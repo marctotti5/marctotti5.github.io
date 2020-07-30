@@ -8,7 +8,7 @@ navbar:
     - text: "Regression"
       menu:
         - text: "NBA Salary Calculator"
-        - href: nba_project.html
+          href: nba_project.html
     - text: "Classification"
     - text: "Time Series Analysis"
       menu:
