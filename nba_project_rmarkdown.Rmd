@@ -17,7 +17,7 @@ In this project I am going to develop a model to predict the average salary of a
 
 ```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE, echo = FALSE}
 library(knitr)
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/SALARIOS NBA/nbafoto.jfif")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/SALARIOS NBA/nbafoto.JFIF")
 ```
 
 
