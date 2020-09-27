@@ -9,6 +9,8 @@ navbar:
       menu:
         - text: "NBA Salary Calculator"
           href: nba_project_rmarkdown.html
+        - text: "Airbnb Price per Night prediction"
+          href: airbnb_night_price_rmarkdown.html
     - text: "Classification"
       menu:
         - text: "Other projects"
