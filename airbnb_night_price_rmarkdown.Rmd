@@ -19,7 +19,7 @@ In this project I am going to test different statistical learning methods in ord
 
 ```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE, echo = FALSE}
 library(knitr)
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/barcelona.jpg")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/barcelona.jpg")
 ```
 
 
@@ -539,19 +539,19 @@ test <- -train
 
 Ridge regression is a type of regularized linear regression, which includes a squared penalty, multiplied by a shrinkage parameter lambda, which has to be chosen by cross-validation. It is basically a regression problem where the goal is to find the coefficients (betas) to optimize a penalized Residual Sum of Squares Formula (as seen in the following chunk):
 ```{r, warning = FALSE, message = FALSE, fig.align="center", echo = FALSE, fig.height = 5, fig.width = 10}
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/ridgeregression1.png")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/ridgeregression1.png")
 ```
 
 The coefficients are those that minimize the previous formula:
 ```{r, warning = FALSE, message = FALSE, fig.align="center", echo = FALSE, fig.height = 5, fig.width = 10}
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/ridgeregression2.png")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/ridgeregression2.png")
 ```
 Source: *The Elements of Statistical Learning* by Robert Hastie, Trevor Tibshirani and Jerome Friedman
 
 
 In matrix notation this is equivalent to: 
 ```{r, warning = FALSE, message = FALSE, fig.align="center", echo = FALSE, fig.height = 5, fig.width = 10}
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/ridgeregression3.png")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/ridgeregression3.png")
 ```
 Source: *The Elements of Statistical Learning* by Robert Hastie, Trevor Tibshirani and Jerome Friedman
 
@@ -601,7 +601,7 @@ ridge_accuracy_plot
 
 Lasso regression is a type of regularized linear regression, which includes an absolute value penalty, multiplied by a shrinkage parameter lambda, which has to be chosen by cross-validation. 
 ```{r, warning = FALSE, message = FALSE, fig.align="center", echo = FALSE, fig.height = 5, fig.width = 10}
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/lasso.png")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/lasso.png")
 ```
 Source: *The Elements of Statistical Learning* by Robert Hastie, Trevor Tibshirani and Jerome Friedman
 
@@ -645,7 +645,7 @@ lasso_accuracy_plot
 
 Bagging stands for *Bootstraped Aggregation*, and basically averages the predictions obtained from n regression trees (each regression tree is trained in a different bootstraped subset of the data, but without restrictions in the number of predictors considered at each split step). The formula behind this algorithm is the following one:
 ```{r, warning = FALSE, message = FALSE, fig.align="center", echo = FALSE, fig.height = 5, fig.width = 10}
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/bagging.png")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/bagging.png")
 ```
 Source: *The Elements of Statistical Learning, 2nd Edition* by Robert Hastie, Trevor Tibshirani and Jerome Friedman
 
@@ -711,7 +711,7 @@ This model looks even more robust than the previous due to the stronger linear r
 
 Gradient boosting is also the result of combining n regression trees. It starts by predicting the variable with its mean, and then constructs n trees, predicting the residuals (the difference between price and its predicted value). This way each regression tree takes into account the errors from the previous one, creating a very robust model. The mathematical description of the Gradient Boosting algorithm is the following one:
 ```{r, warning = FALSE, message = FALSE, fig.align="center", echo = FALSE, fig.height = 5, fig.width = 10}
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/gradientboosting.png")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/gradientboosting.png")
 ```
 Source: *The Elements of Statistical Learning* by Robert Hastie, Trevor Tibshirani and Jerome Friedman
 
@@ -804,5 +804,5 @@ plot_final
 
 ```{r, fig.align="center", warning = FALSE, echo = FALSE}
 library(knitr)
-include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/euleridentity.png")
+include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/airbnb_night_price_rmarkdown_files/images/euleridentity.png")
 ```
