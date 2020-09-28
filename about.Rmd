@@ -1,5 +1,11 @@
 ---
-title: "About This Website"
+title: "Curriculum Vitae"
 ---
 
-More about this website.
+```{r, echo = FALSE}
+library(knitr)
+library(tinytex)
+
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/curriculum/curriculum1.jpg")
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/curriculum/curriculum2.jpg")
+```
