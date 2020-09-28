@@ -6,7 +6,7 @@ My name is Marc Pastor, I am 20 years old very passionate about Data Science. I 
 
 ```{r, echo = FALSE, fig.align = "center"}
 library(knitr)
-knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/fotosmarc/fotopresentació.jpg")
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/fotopresentacio.jpg")
 ```
 
 
