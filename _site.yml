@@ -22,10 +22,11 @@ navbar:
           href: usgas.html
         - text: "US Car Sales Forecast"
           href: car_sales_forecast.html
-    - text: "CV"
-      href: about.html
     - text: "Power BI, Tableau & more"
       href: others.html
+    - text: "CV"
+      href: about.html
+
 output:
   html_document:
     theme: united
