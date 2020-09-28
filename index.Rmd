@@ -4,7 +4,7 @@ title: "Hi there!"
 
 My name is Marc Pastor, I am 20 years old very passionate about Data Science. I discovered this amazing field back in 2018, as a Freshman in a Business Bachelor in Barcelona. Since I was curious about data, I started learning some SQL as well as other tools such as Tableau, Microsoft Power BI, and QlikView, which I would use to visualize the data for my college projects. Finally at the end of that year, after reading a lot about the different jobs in the data market, I realized I wanted to become a Data Scientist. 
 
-```{r, echo = FALSE, fig.align = "left", fig.width = 5, fig.height = 10}
+```{r, echo = FALSE, fig.align = "center"}
 library(knitr)
 knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/fotosmarc/fotopresentació.jpg")
 ```
