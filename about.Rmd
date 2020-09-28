@@ -1,11 +1,8 @@
 ---
 title: "Curriculum Vitae"
 ---
-
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.align = "left", fig.width = 15, fig.height = 35}
 library(knitr)
-library(tinytex)
-
-knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/curriculum/curriculum1.jpg")
-knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/curriculum/curriculum2.jpg")
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/curriculum/CURRICULUM.png")
 ```
+
