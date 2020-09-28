@@ -14,7 +14,7 @@ That's why, in January 2019 I decided that on the following course, I would tran
 
 ```{r, echo = FALSE, fig.align = "left", fig.width = 5, fig.height = 10}
 library(knitr)
-knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/fotosmarc/fotopresentació.jpg")
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/libros.png")
 ```
 
 I have created this web page to upload all my Data Science projects, that I will create to apply the theoretical concepts that I've learned. I have lots of ideas related to sports analytics, applying NLP to Tweets, predicting stock market prices, etc. Right now I am trying to become confident with those algorithms that I already know as well as learning constantly through intensive reading. 
