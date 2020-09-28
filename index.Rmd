@@ -4,8 +4,18 @@ title: "Hi there!"
 
 My name is Marc Pastor, I am 20 years old very passionate about Data Science. I discovered this amazing field back in 2018, as a Freshman in a Business Bachelor in Barcelona. Since I was curious about data, I started learning some SQL as well as other tools such as Tableau, Microsoft Power BI, and QlikView, which I would use to visualize the data for my college projects. Finally at the end of that year, after reading a lot about the different jobs in the data market, I realized I wanted to become a Data Scientist. 
 
-That's why, in January 2019 I decided that on the following course, I would transfer to a Statistics Bachelor in Madrid. At the same time, I started coding in R, I first did some online courses and later decided to read "R for Data Science", from the great Hadley Wickham. I would do small projects, mainly exploratory data analysis and data visualization. After summer, I moved to Madrid and started my new Bachelor on Stats, which I have been enjoying a lot so far. While following Coursera courses (R programming, Exploratory Data Analysis, Data Wrangling, etc) I was very interested in Linear Algebra, Calculus I, II, Probability I and II and Programming Classes, and getting pretty good marks. After finishing my classes on Algebra and Calculus (I and II) I was pretty confident on the math, and decided to start exploring some specific areas of Data Science. After having read some interesting books on Data Science (An Introduction to Statistical Learning, Machine Learning with R, Time Series Analysis with R, etc) I have realized how huge and amazing this field is. 
+```{r, echo = FALSE, fig.align = "left", fig.width = 5, fig.height = 10}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/fotosmarc/fotopresentació.jpg")
+```
 
+
+That's why, in January 2019 I decided that on the following course, I would transfer to a Statistics Bachelor in Madrid. At the same time, I started coding in R, I first did some online courses and later decided to read "R for Data Science", from the great Hadley Wickham. I would do small projects, mainly exploratory data analysis and data visualization. After summer, I moved to Madrid and started my new Bachelor on Stats, which I have been enjoying a lot so far. After finishing my classes on Probability, Algebra and Calculus I was pretty confident on the math, and decided to start exploring some specific areas of Data Science. After having read some interesting books on Data Science (An Introduction to Statistical Learning, Machine Learning with R, Time Series Analysis with R, etc) I have realized how huge and amazing this field is. 
+
+```{r, echo = FALSE, fig.align = "left", fig.width = 5, fig.height = 10}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/fotosmarc/fotopresentació.jpg")
+```
 
 I have created this web page to upload all my Data Science projects, that I will create to apply the theoretical concepts that I've learned. I have lots of ideas related to sports analytics, applying NLP to Tweets, predicting stock market prices, etc. Right now I am trying to become confident with those algorithms that I already know as well as learning constantly through intensive reading. 
 

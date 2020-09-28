@@ -1,0 +1,50 @@
+---
+title: "PowerBI, Tableau & More"
+output: html_document
+---
+In this small section I will post some of the plots and dashboards that I've managed to create with Power BI, Tableau and other GUI's (Guided User Interface). I use this tools in order to make simple, quick and fancy plots, whenever I have to present projects at college. These are some of my creations: 
+
+# **Porsche Case Study**
+```{r, echo = FALSE, fig.align = "center"}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/porsche1.png")
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/porsche2.png")
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/porsche3.png")
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/porsche4.png")
+```
+
+
+# **Bibliohteca Project**
+```{r, echo = FALSE, fig.align = "center"}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/biblioteca.png")
+```
+
+
+# **Indra Case Study**
+```{r, echo = FALSE, fig.align = "center"}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/indra1.png")
+```
+
+
+# **Entertoyment Case Study**
+```{r, echo = FALSE, fig.align = "center"}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/entertoyment1.png")
+```
+
+
+# **Deaths by Terrorist Attacks around the World**
+```{r, echo = FALSE, fig.align = "center"}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/terrorismo1.png")
+```
+
+
+# **Sales Dashboard**
+```{r, echo = FALSE, fig.align = "center"}
+library(knitr)
+knitr::include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/marctotti5.github.io/powerbitableaufotos/dashboard1.png")
+```
+
