@@ -55,19 +55,19 @@ airbnb_data <- read.csv("./barcelona.csv") %>% select(c("host_since", "host_resp
 
 ### **Airbnb Barcelona Dataset**
 This dataset contains 20864 rows (observations) and 60 columns, and as we can already see, some variables have very messy data, and this will require a lot of data wrangling. 
-```{r, results = "hide", message = FALSE}
+```{r, results = "hide", message = FALSE, warning = FALSE}
 str(airbnb_data)
 ```
 
 As a complement for the main dataset, I'll be using the *neighbourhoods_geojson* dataset, which provides geospatial information from barcelona and its airbnb apartments (such as longitude, latitude, polygons, etc):
-```{r, results = "hide", message = FALSE}
+```{r, results = "hide", message = FALSE, warning = FALSE}
 library(rgdal)
 neighbourhoods_geojson <- rgdal::readOGR("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documentos/CURSOS/PROJECTES/AIRBNB PRICE PREDICTION/DATA/neighbourhoods.geojson")
 ```
 
 ## **Data Wrangling**
 First of all I load the lubridate package, which I use to convert the *host_since* variable, from a character to a date format. Then I extract the year from the variable I have just converted and reorder the data. 
-```{r, echo = TRUE, results = "hide", message = FALSE}
+```{r, echo = TRUE, results = "hide", message = FALSE, warning = FALSE}
 library(lubridate)
 airbnb_data$host_since <- ymd(airbnb_data$host_since)
 airbnb_data$host_since_year <- year(airbnb_data$host_since)
@@ -569,7 +569,7 @@ plot(cv.out_ridge, main = "10-CV to choose Best Lambda")
 Here we can see the different values of lambda (the shrinkage penalty) and their related MSE. 
 
 Now we create a model with the best lambda, make the predictions on the test set, and compare the results to the test result using the RMSE (Root Mean Squared Error), as the squared root of the mean of the sum of all the predicted values minus the test values all squared. Here we can see the best lambda and the rmse
-```{r, fig.align="center", fig.height = 5, fig.width = 10}
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE, message = FALSE}
 bestlam_ridge <- cv.out_ridge$lambda.min
 paste("The Best Lambda is: ", bestlam_ridge)
 
@@ -581,7 +581,7 @@ paste("RMSE: ", rmse_ridge)
 ```
 
 Now we check how well the model fitted the data visually, by plotting the test values versus the predicted values. As we can see there is kind of a correlation between the test and the predicted values, and it is not bad as a starting model. 
-```{r, fig.align="center", fig.height = 5, fig.width = 10}
+```{r, fig.align="center", fig.height = 5, fig.width = 10, warning = FALSE, message = FALSE}
 ridge_prediction <- cbind(ridge.pred, y[test]) %>% as.data.frame()
 colnames(ridge_prediction) <- c("Prediction", "Test_value")
 
@@ -716,7 +716,7 @@ include_graphics("C:/Users/marct/OneDrive - Tecnocampus Mataro-Maresme/Documento
 Source: *The Elements of Statistical Learning* by Robert Hastie, Trevor Tibshirani and Jerome Friedman
 
 In order to compute this algorithm, firsly I convert all characters into factors, since we can't use characters in the formula.
-```{r, fig.align="center", warning = FALSE, echo = FALSE, message = FALSE}
+```{r, fig.align="center", warning = FALSE, message = FALSE}
 for(j in 1:ncol(airbnb_data)){
         if(is.character(airbnb_data[, j]) == TRUE){
                 airbnb_data[, j] <- as.factor(airbnb_data[, j])
@@ -725,7 +725,7 @@ for(j in 1:ncol(airbnb_data)){
 ```
 
 I apply the algorithm following a similar procedure to the previous models, and obtain the following plot:
-```{r, fig.align="center", warning = FALSE, echo = FALSE, message = FALSE}
+```{r, fig.align="center", warning = FALSE, message = FALSE}
 library(gbm)
 gbm_airbnb_data <- gbm(price ~., data = airbnb_data[train, ], distribution = "gaussian", n.trees = 1000)
 yhat.gboosting <- predict(gbm_airbnb_data, newdata = airbnb_data[test, ])
@@ -746,7 +746,7 @@ The model seems to be performing worse than the last two, but better than the ri
 ### **Ensemble Model**
 
 I create an Ensemble Model combining the Ridge, Lasso, Bagging, Random Forest and Boosting results.
-```{r, fig.align="center", warning = FALSE, echo = FALSE, message = FALSE}
+```{r, fig.align="center", warning = FALSE, message = FALSE}
 ensemble_prediction <- ridge.pred + lasso.pred + yhat.bagging + yhat.rf_airbnb_sqrtpred + yhat.gboosting / 5
 ensemble_rmse <- sqrt(mean((ensemble_prediction - airbnb_data$price[test]) ^2))
 ensemble_data <- data.frame(ensemble = ensemble_prediction, testvalue = airbnb_data$price[test])
@@ -780,7 +780,7 @@ rmse_comparison <- rmse_comparison[, c(2, 1)]
 ```
 
 We can observe that the best model by far is the Random Forest, followed by the Bagging. It is curious that the Random Forest has outperformed the Boosting, since it is a more sophisticated learning method. Therefore chosen model is the Random Forest!
-```{r, fig.align="center", warning = FALSE, echo = FALSE, message = FALSE}
+```{r, fig.align="center", warning = FALSE, message = FALSE}
 library(ggpubr)
 plot_rmse_comparison <- ggplot(data = rmse_comparison, aes(x = reorder(method, desc(RMSE)), y = RMSE, fill = method)) + 
         geom_bar(stat = "identity") + xlab("Statistical Learning Method") + 
