@@ -7,10 +7,11 @@ navbar:
       href: index.html
     - text: "Regression"
       menu:
-        - text: "NBA Salary Calculator"
-          href: nba_project_rmarkdown.html
         - text: "Airbnb Price per Night prediction"
           href: airbnb.html
+        - text: "NBA Salary Calculator"
+          href: nba_project_rmarkdown.html
+
     - text: "Classification"
       menu:
         - text: "Other projects"
