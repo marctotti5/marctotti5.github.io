@@ -14,7 +14,9 @@ navbar:
 
     - text: "Classification"
       menu:
-        - text: "Other projects"
+        - text: "Coming Soon!"
+    - text: "Deep Learning"
+        - text: "Coming Soon"
     - text: "Time Series Analysis"
       menu:
         - text: "Unemployment in Spain"
