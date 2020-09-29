@@ -17,7 +17,7 @@ navbar:
         - text: "Coming Soon!"
     - text: "Deep Learning"
       menu:
-        - text: "Coming Soon"
+        - text: "Coming Soon!"
     - text: "Time Series Analysis"
       menu:
         - text: "Unemployment in Spain"
